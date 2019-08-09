@@ -9,7 +9,7 @@ ms.reviewer: douglasl
 ms.service: data-factory
 ms.workload: data-services
 ms.topic: conceptual
-ms.date: 06/10/2019
+ms.date: 08/06/2019
 ms.author: jingwang
 
 ---
@@ -56,6 +56,9 @@ The Azure Data Lake Storage Gen2 connector supports the following authentication
 - [Service principal authentication](#service-principal-authentication)
 - [Managed identities for Azure resources authentication](#managed-identity)
 
+>[!NOTE]
+>When using PolyBase to load data into SQL Data Warehouse, if your source Data Lake Storage Gen2 is configured with Virtual Network endpoint, you must use managed identity authentication as required by PolyBase. See the [managed identity authentication](#managed-identity) section with more configuration prerequisites.
+
 ### Account key authentication
 
 To use storage account key authentication, the following properties are supported:
@@ -99,16 +102,16 @@ To use service principal authentication, follow these steps.
     - Application key
     - Tenant ID
 
-2. Grant the service principal proper permission.
+2. Grant the service principal proper permission. Learn more on how permission works in Data Lake Storage Gen2 from [Access control lists on files and directories](../storage/blobs/data-lake-storage-access-control.md#access-control-lists-on-files-and-directories)
 
-    - **As source**: In Azure Storage Explorer, grant at least **Read + Execute** permission to list and copy the files in folders and subfolders. Or, you can grant **Read** permission to copy a single file. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Reader** role.
-    - **As sink**: In Storage Explorer, grant at least **Write + Execute** permission to create child items in the folder. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Contributor** role.
+    - **As source**: In Storage Explorer, grant at least **Execute** permission starting from the source file system, along with **Read** permission for the files to copy. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Reader** role.
+    - **As sink**: In Storage Explorer, grant at least **Execute** permission starting from the sink file system, along with **Write** permission for the sink folder. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Contributor** role.
 
 >[!NOTE]
 >To list folders starting from the account level or to test connection, you need to set the permission of the service principal being granted to **storage account with "Storage Blob Data Reader" permission in IAM**. This is true when you use the:
 >- **Copy data tool** to author copy pipeline.
 >- **Data Factory UI** to test connection and navigating folders during authoring. 
->If you have concerns about granting permission at the account level, you can skip test connection and input path manually during authoring. Copy activity still works as long as the service principal is granted with proper permission at the files to be copied.
+>If you have concerns about granting permission at the account level, during authoring, skip testing connection, and input a parent path with permission granted then choose to browse from that specified path. Copy activity works as long as the service principal is granted with proper permission at the files to be copied.
 
 These properties are supported for the linked service:
 
@@ -153,19 +156,19 @@ To use managed identities for Azure resource authentication, follow these steps.
 
 1. [Retrieve the Data Factory managed identity information](data-factory-service-identity.md#retrieve-managed-identity) by copying the value of the **service identity application ID** generated along with your factory.
 
-2. Grant the managed identity proper permission.
+2. Grant the managed identity proper permission. Learn more on how permission works in Data Lake Storage Gen2 from [Access control lists on files and directories](../storage/blobs/data-lake-storage-access-control.md#access-control-lists-on-files-and-directories).
 
-    - **As source**: In Storage Explorer, grant at least **Read + Execute** permission to list and copy the files in folders and subfolders. Or, you can grant **Read** permission to copy a single file. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Reader** role.
-    - **As sink**: In Storage Explorer, grant at least **Write + Execute** permission to create child items in the folder. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Contributor** role.
+    - **As source**: In Storage Explorer, grant at least **Execute** permission starting from the source file system, along with **Read** permission for the files to copy. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Reader** role.
+    - **As sink**: In Storage Explorer, grant at least **Execute** permission starting from the sink file system, along with **Write** permission for the sink folder. Alternatively, in Access control (IAM), grant at least the **Storage Blob Data Contributor** role.
 
 >[!NOTE]
 >To list folders starting from the account level or to test connection, you need to set the permission of the managed identity being granted to **storage account with "Storage Blob Data Reader" permission in IAM**. This is true when you use the:
 >- **Copy data tool** to author copy pipeline.
 >- **Data Factory UI** to test connection and navigating folders during authoring. 
->If you have concerns about granting permission at the account level, you can skip test connection and input path manually during authoring. Copy activity still works as long as the managed identity is granted with proper permission at the files to be copied.
+>If you have concerns about granting permission at the account level, during authoring, skip testing connection, and input a parent path with permission granted then choose to browse from that specified path. Copy activity works as long as the service principal is granted with proper permission at the files to be copied.
 
 >[!IMPORTANT]
->If you use PolyBase to load data from Data Lake Storage Gen2 into SQL Data Warehouse, when you use Data Lake Storage Gen2 managed identity authentication, make sure you also follow steps 1 and 2 in [this guidance](../sql-database/sql-database-vnet-service-endpoint-rule-overview.md#impact-of-using-vnet-service-endpoints-with-azure-storage). Follow the instructions to register your SQL Database server with Azure Active Directory (Azure AD). You also assign the Storage Blob Data Contributor role with role-based access control to your SQL Database server. The rest is handled by Data Factory. If your Data Lake Storage Gen2 is configured with an Azure Virtual Network endpoint to use PolyBase to load data from it, you must use managed identity authentication.
+>If you use PolyBase to load data from Data Lake Storage Gen2 into SQL Data Warehouse, when using  managed identity authentication for Data Lake Storage Gen2, make sure you also follow steps 1 and 2 in [this guidance](../sql-database/sql-database-vnet-service-endpoint-rule-overview.md#impact-of-using-vnet-service-endpoints-with-azure-storage) to 1) register your SQL Database server with Azure Active Directory (Azure AD) and 2) assign the Storage Blob Data Contributor role to your SQL Database server; the rest are handled by Data Factory. If your Data Lake Storage Gen2 is configured with an Azure Virtual Network endpoint, to use PolyBase to load data from it, you must use managed identity authentication as required by PolyBase.
 
 These properties are supported for the linked service:
 
@@ -197,12 +200,12 @@ These properties are supported for the linked service:
 
 For a full list of sections and properties available for defining datasets, see [Datasets](concepts-datasets-linked-services.md).
 
-- For the parquet and delimited text format, see the [Parquet and delimited text format dataset](#parquet-and-delimited-text-format-dataset) section.
-- For other formats like ORC, Avro, JSON, or binary format, see the [Other format dataset](#other-format-dataset) section.
+- For **Parquet, delimited text and binary format**, refer to [Parquet, delimited text and binary format dataset](#format-based-dataset) section.
+- For other formats like **ORC/Avro/JSON format**, refer to [Other format dataset](#other-format-dataset) section.
 
-### Parquet and delimited text format dataset
+### <a name="format-based-dataset"></a> Parquet, delimited text and binary format dataset
 
-To copy data to and from Data Lake Storage Gen2 in parquet or delimited text format, see the [Parquet format](format-parquet.md) and [Delimited text format](format-delimited-text.md) articles on format-based dataset and supported settings. The following properties are supported for Data Lake Storage Gen2 under `location` settings in the format-based dataset:
+To copy data to and from **Parquet, delimited text or binary format**, refer to [Parquet format](format-parquet.md), [Delimited text format](format-delimited-text.md) and [Binary format](format-binary.md) article on format-based dataset and supported settings. The following properties are supported for Data Lake Storage Gen2 under `location` settings in the format-based dataset:
 
 | Property   | Description                                                  | Required |
 | ---------- | ------------------------------------------------------------ | -------- |
@@ -243,7 +246,7 @@ To copy data to and from Data Lake Storage Gen2 in parquet or delimited text for
 
 ### Other format dataset
 
-To copy data to and from Data Lake Storage Gen2 in ORC, Avro, JSON, or binary format, the following properties are supported:
+To copy data to and from Data Lake Storage Gen2 in **ORC/Avro/JSON format**, the following properties are supported:
 
 | Property | Description | Required |
 |:--- |:--- |:--- |
@@ -294,12 +297,12 @@ For a full list of sections and properties available for defining activities, se
 
 ### Azure Data Lake Storage Gen2 as a source type
 
-- To copy from the parquet or delimited text format, see the [Parquet and delimited text format source](#parquet-and-delimited-text-format-source) section.
-- To copy from other formats like ORC, Avro, JSON, or binary format, see the [Other format source](#other-format-source) section.
+- To copy from **Parquet, delimited text and binary format**, refer to [Parquet, delimited text and binary format source](#format-based-source) section.
+- To copy from other formats like **ORC/Avro/JSON format**, refer to [Other format source](#other-format-source) section.
 
-#### Parquet and delimited text format source
+#### <a name="format-based-source"></a> Parquet, delimited text and binary format source
 
-To copy data from Data Lake Storage Gen2 in parquet or delimited text format, see the [Parquet format](format-parquet.md) and [Delimited text format](format-delimited-text.md) article on format-based copy activity source and supported settings. The following properties are supported for Data Lake Storage Gen2 under `storeSettings` settings in format-based copy source:
+To copy data from **Parquet, delimited text or binary format**, refer to [Parquet format](format-parquet.md), [Delimited text format](format-delimited-text.md) and [Binary format](format-binary.md) article on format-based copy activity source and supported settings. The following properties are supported for Data Lake Storage Gen2 under `storeSettings` settings in format-based copy source:
 
 | Property                 | Description                                                  | Required                                      |
 | ------------------------ | ------------------------------------------------------------ | --------------------------------------------- |
@@ -357,7 +360,7 @@ To copy data from Data Lake Storage Gen2 in parquet or delimited text format, se
 
 #### Other format source
 
-To copy data from Data Lake Storage Gen2 in ORC, Avro, JSON, or binary format, the following properties are supported in the copy activity **source** section:
+To copy data from Data Lake Storage Gen2 in **ORC/Avro/JSON format**, the following properties are supported in the copy activity **source** section:
 
 | Property | Description | Required |
 |:--- |:--- |:--- |
@@ -399,12 +402,12 @@ To copy data from Data Lake Storage Gen2 in ORC, Avro, JSON, or binary format, t
 
 ### Azure Data Lake Storage Gen2 as a sink type
 
-- To copy to the parquet or delimited text format, see the [Parquet and delimited text format sink](#parquet-and-delimited-text-format-sink) section.
-- To copy to other formats like ORC, Avro, JSON, or binary format, see the [Other format sink](#other-format-sink) section.
+- To copy to **Parquet, delimited text or binary format**, refer to [Parquet, delimited text and binary format sink](#format-based-sink) section.
+- To copy to other formats like **ORC/Avro/JSON format**, refer to [Other format sink](#other-format-sink) section.
 
-#### Parquet and delimited text format sink
+#### <a name="format-based-sink"></a> Parquet, delimited text and binary format sink
 
-To copy data to Data Lake Storage Gen2 in parquet or delimited text format, see the [Parquet format](format-parquet.md) and [Delimited text format](format-delimited-text.md) articles on format-based copy activity sink and supported settings. The following properties are supported for Data Lake Storage Gen2 under `storeSettings` settings in format-based copy sink:
+To copy data to **Parquet, delimited text or binary format**, refer to [Parquet format](format-parquet.md), [Delimited text format](format-delimited-text.md) and [Binary format](format-binary.md) article on format-based copy activity sink and supported settings. The following properties are supported for Data Lake Storage Gen2 under `storeSettings` settings in format-based copy sink:
 
 | Property                 | Description                                                  | Required |
 | ------------------------ | ------------------------------------------------------------ | -------- |
@@ -452,7 +455,7 @@ To copy data to Data Lake Storage Gen2 in parquet or delimited text format, see 
 
 #### Other format sink
 
-To copy data to Data Lake Storage Gen2 in ORC, Avro, JSON, or binary format, the following properties are supported in the **sink** section:
+To copy data to Data Lake Storage Gen2 in **ORC/Avro/JSON format**, the following properties are supported in the **sink** section:
 
 | Property | Description | Required |
 |:--- |:--- |:--- |
